@@ -29,10 +29,11 @@ def format_dhcp_packet(pkt: packet.DHCPPacket) -> str:
     broadcast = "BROADCAST" if pkt.flags else "UNICAST"
     client_info_padding = 18
     client_info = f"{pkt.htype} - {pkt.chaddr} ({utils.mac2vendor(pkt.chaddr)})"
-    if (
-        visual_diff := (
+    visual_diff = (
             utils.visual_length(client_info) - (COL_LEN - client_info_padding)
-        )
+    )
+    if (
+        visual_diff
     ) > 0:
         client_info = client_info[:-visual_diff]
 
@@ -176,7 +177,8 @@ class DHCPClient(object):
         self.send_discover(server, discover, verbose)
         # O
         tries = 0
-        while not (offer := self.receive_offer(tx_id, verbose)):
+        offer = self.receive_offer(tx_id, verbose)
+        while not (offer):
             logging.debug(f"Sleeping {self.retry_interval} ms then retrying discover")
             sleep(self.retry_interval / 1000)
             logging.debug(
@@ -208,7 +210,8 @@ class DHCPClient(object):
         self.send_request(server, request, verbose)
         # A
         tries = 0
-        while not (ack := self.receive_ack(tx_id, verbose)):
+        ack = self.receive_ack(tx_id, verbose)
+        while not (ack):
             logging.debug(f"Sleeping {self.retry_interval} ms then retrying request")
             sleep(self.retry_interval / 1000)
             logging.debug(
@@ -256,19 +259,21 @@ class DHCPClient(object):
             logging.debug(
                 f"Select: {select.select(self.listening_sockets, self.writing_sockets, self.except_sockets, 0)}"
             )
+            socks = select.select(
+                self.listening_sockets,
+                self.writing_sockets,
+                self.except_sockets,
+                self.select_timout,
+            )[0]
             if len(
-                socks := select.select(
-                    self.listening_sockets,
-                    self.writing_sockets,
-                    self.except_sockets,
-                    self.select_timout,
-                )[0]
+                socks
             ):
                 for sock in socks:
                     data, addr = sock.recvfrom(self.max_pkt_size)
                     logging.debug(f"Received data from {addr}: {data}")
+                    dhcp_packet = self.get_valid_pkt(data)
                     if (
-                        (dhcp_packet := self.get_valid_pkt(data)) is not None
+                        dhcp_packet is not None
                         and dhcp_packet.xid == tx_id
                         and dhcp_packet.msg_type == msg_type
                     ):
@@ -279,16 +284,19 @@ class DHCPClient(object):
                     else:
                         if dhcp_packet is None:
                             logging.debug("Invalid DHCP packet")
-                        elif dhcp_packet.xid != tx_id:
-                            logging.debug(
-                                f"TX ID does not match expected ID {dhcp_packet.xid} != {tx_id}"
-                            )
-                        elif (msg_type_actual := dhcp_packet.msg_type) != msg_type:
-                            logging.debug(
-                                f"DHCP message type does not match expected: {msg_type_actual} != {msg_type}"
-                            )
                         else:
-                            logging.debug("Something is wrong with this packet")
+                            if dhcp_packet.xid != tx_id:
+                                logging.debug(
+                                    f"TX ID does not match expected ID {dhcp_packet.xid} != {tx_id}"
+                                )
+                            else:
+                                msg_type_actual = dhcp_packet.msg_type
+                                if msg_type_actual != msg_type:
+                                    logging.debug(
+                                        f"DHCP message type does not match expected: {msg_type_actual} != {msg_type}"
+                                    )
+                                else:
+                                    logging.debug("Something is wrong with this packet")
                         logging.debug(dhcp_packet)
                         dhcp_packet = None
                         tries += 1
@@ -346,13 +354,14 @@ class DHCPClient(object):
         tries = 0
         while tries < self.max_tries:
             logging.debug(f"Select: {select.select(self.listening_sockets, self.writing_sockets, self.except_sockets, self.select_timout,)}")
+            socks = select.select(
+                self.listening_sockets,
+                self.writing_sockets,
+                self.except_sockets,
+                self.select_timout,
+            )[1]
             if len(
-                socks := select.select(
-                    self.listening_sockets,
-                    self.writing_sockets,
-                    self.except_sockets,
-                    self.select_timout,
-                )[1]
+                socks
             ):
                 sock = socks[0]
                 logging.debug(f"Connecting to {remote_addr}:{remote_port}")

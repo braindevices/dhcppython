@@ -14,7 +14,7 @@ DESCRIPTION = 'Package for working with DHCP packets - including a DHCP client',
 URL = 'https://github.com/vfrazao-ns1/dhcppython'
 EMAIL = ''
 AUTHOR = 'Victor Frazao'
-REQUIRES_PYTHON = '>=3.8.0'
+REQUIRES_PYTHON = '>=3.7.0'
 VERSION = '0.1.3'
 
 # What packages are required for this module to be executed?
