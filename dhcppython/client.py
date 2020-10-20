@@ -173,7 +173,7 @@ class DHCPClient(object):
         if verbose > 1:
             print(format_dhcp_packet(discover))
         start = default_timer()
-        logging.debug(f"Sending discover packet to {server} with {tx_id=}")
+        logging.debug(f"Sending discover packet to {server} with tx_id={tx_id}")
         self.send_discover(server, discover, verbose)
         # O
         tries = 0
@@ -182,7 +182,7 @@ class DHCPClient(object):
             logging.debug(f"Sleeping {self.retry_interval} ms then retrying discover")
             sleep(self.retry_interval / 1000)
             logging.debug(
-                f"Attempt {tries} - Sending discover packet to {server} with {tx_id=}"
+                f"Attempt {tries} - Sending discover packet to {server} with tx_id={tx_id}"
             )
             if verbose > 1:
                 print("Resending DISCOVER packet")
@@ -206,7 +206,7 @@ class DHCPClient(object):
             print("REQUEST Packet")
             print(format_dhcp_packet(request))
         logging.debug(f"Constructed request packet: {request}")
-        logging.debug(f"Sending request packet to {server} with {tx_id=}")
+        logging.debug(f"Sending request packet to {server} with tx_id={tx_id}")
         self.send_request(server, request, verbose)
         # A
         tries = 0
@@ -215,7 +215,7 @@ class DHCPClient(object):
             logging.debug(f"Sleeping {self.retry_interval} ms then retrying request")
             sleep(self.retry_interval / 1000)
             logging.debug(
-                f"Attempt {tries} - Sending request packet to {server} with {tx_id=}"
+                f"Attempt {tries} - Sending request packet to {server} with tx_id={tx_id}"
             )
             if verbose > 1:
                 print("Resending REQUEST packet")
